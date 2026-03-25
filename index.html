@@ -16,7 +16,6 @@ body{
     display:flex;
     height:100vh;
 }
-
 #login{
     margin:auto;
     background:white;
@@ -24,36 +23,30 @@ body{
     border-radius:15px;
     width:300px;
 }
-
 #app{
     display:none;
     width:100%;
 }
-
 .sidebar{
     width:30%;
     background:white;
     padding:10px;
 }
-
 .main{
     flex:1;
     padding:10px;
 }
-
 input,button{
     width:100%;
     padding:10px;
     margin:5px 0;
 }
-
 button{
     background:#7b5cff;
     color:white;
     border:none;
     cursor:pointer;
 }
-
 .book{
     padding:8px;
     margin:5px 0;
@@ -91,16 +84,18 @@ button{
 </div>
 
 <script>
-// 🔥 Firebase config (ВСТАВ СВІЙ З FIREBASE)
+// Firebase config (твій реальний)
 const firebaseConfig = {
-  apiKey: "ТВІЙ_API_KEY",
-  authDomain: "ТВІЙ_AUTH_DOMAIN",
-  projectId: "ТВІЙ_PROJECT_ID",
-  storageBucket: "ТВІЙ_STORAGE_BUCKET",
-  messagingSenderId: "ТВІЙ_SENDER_ID",
-  appId: "ТВІЙ_APP_ID"
+  apiKey: "AIzaSyDG9DT2ImvGLeZRdQ4j5nVttQCU44TFNj8",
+  authDomain: "bookflow-17d9f.firebaseapp.com",
+  projectId: "bookflow-17d9f",
+  storageBucket: "bookflow-17d9f.firebasestorage.app",
+  messagingSenderId: "1020382441634",
+  appId: "1:1020382441634:web:40200c67e0f7e55038e7fb",
+  measurementId: "G-9Z63GN3M5W"
 };
 
+// init Firebase
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
@@ -108,6 +103,15 @@ const db = firebase.firestore();
 
 let currentUser = null;
 let currentBook = null;
+
+// DOM
+const login = document.getElementById("login");
+const app = document.getElementById("app");
+const bookInput = document.getElementById("bookInput");
+const bookList = document.getElementById("bookList");
+const noteInput = document.getElementById("noteInput");
+const notes = document.getElementById("notes");
+const bookTitle = document.getElementById("bookTitle");
 
 // AUTH
 function signup(){
@@ -131,7 +135,7 @@ auth.onAuthStateChanged(user=>{
         login.style.display="none";
         app.style.display="flex";
         loadBooks();
-    }else{
+    } else {
         login.style.display="block";
         app.style.display="none";
     }
