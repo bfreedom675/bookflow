@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>Книжковий сервіс v4</title>
+
+<style>
+body {
+    margin: 0;
+    font-family: Arial, sans-serif;
+    display: flex;
+    height: 100vh;
+}
+
+/* SIDEBAR */
+#sidebar {
+    width: 30%;
+    background: #0f0f0f;
+    color: white;
+    padding: 10px;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+input, button {
+    padding: 8px;
+    border: none;
+    border-radius: 6px;
+}
+
+button {
+    cursor: pointer;
+    background: black;
+    color: white;
+}
+
+.book {
+    padding: 10px;
+    background: #222;
+    border-radius: 6px;
+    cursor: pointer;
+}
+
+.book:hover {
+    background: #333;
+}
+
+/* MAIN */
+#main {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    background: #f4f4f4;
+}
+
+header {
+    background: black;
+    color: white;
+    padding: 12px;
+}
+
+#stats {
+    padding: 10px;
+    background: #eee;
+    font-size: 14px;
+}
+
+#chat {
+    flex: 1;
+    padding: 15px;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 10px;
+}
+
+.msg {
+    padding: 10px;
+    border-radius: 10px;
+    max-width: 70%;
+    white-space: pre-wrap;
+}
+
+.user { align-self: flex-end; background: #cfe8ff; }
+.bot { align-self: flex-start; background: #e6e6e6; }
+
+/* INPUT */
+#inputArea {
+    display: flex;
+    gap: 6px;
+    padding: 10px;
+    background: white;
+    border-top: 1px solid #ccc;
+}
+
+#text { flex: 1; }
+
+/* TOP BUTTONS */
+.topbar {
+    display: flex;
+    gap: 5px;
+}
+.small { width: 90px; }
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+    <h3>📚 Бібліотека</h3>
+
+    <input id="search" placeholder="🔍 Пошук..." oninput="renderBooks()" />
+
+    <input id="newBook" placeholder="Нова книга..." />
+    <button onclick="addBook()">➕ Додати</button>
+
+    <div class="topbar">
+        <button onclick="exportData()">⬇ Export</button>
+        <button onclick="importData()">⬆ Import</button>
+    </div>
+
+    <div id="bookList"></div>
+</div>
+
+<div id="main">
+
+<header id="title">📖 Оберіть книгу</header>
+
+<div id="stats">📊 Статистика: —</div>
+
+<div id="chat"></div>
+
+<div id="inputArea">
+    <input id="text" placeholder="Нотатка..." />
+    <input id="rating" class="small" type="number" min="1" max="10" placeholder="⭐">
+    <button onclick="addNote()">Надіслати</button>
+</div>
+
+</div>
+
+<script>
+let db = JSON.parse(localStorage.getItem("bookAppV4")) || {
+    user: "Мій профіль",
+    books: {}
+};
+
+let current = null;
+
+/* SAVE */
+function save() {
+    localStorage.setItem("bookAppV4", JSON.stringify(db));
+}
+
+/* BOOKS */
+function addBook() {
+    let name = document.getElementById("newBook").value.trim();
+    if (!name) return;
+
+    if (!db.books[name]) db.books[name] = [];
+
+    document.getElementById("newBook").value = "";
+    save();
+    renderBooks();
+}
+
+function renderBooks() {
+    let list = document.getElementById("bookList");
+    let search = document.getElementById("search").value.toLowerCase();
+
+    list.innerHTML = "";
+
+    Object.keys(db.books)
+        .filter(b => b.toLowerCase().includes(search))
+        .forEach(name => {
+            let div = document.createElement("div");
+            div.className = "book";
+            div.innerText = name;
+            div.onclick = () => openBook(name);
+            list.appendChild(div);
+        });
+
+    updateStats();
+}
+
+/* OPEN BOOK */
+function openBook(name) {
+    current = name;
+    document.getElementById("title").innerText = "📖 " + name;
+    renderChat();
+}
+
+/* CHAT */
+function renderChat() {
+    let chat = document.getElementById("chat");
+    chat.innerHTML = "";
+
+    if (!current) return;
+
+    db.books[current].forEach(m => {
+        let div = document.createElement("div");
+        div.className = "msg " + m.type;
+        div.innerText = m.text;
+        chat.appendChild(div);
+    });
+
+    chat.scrollTop = chat.scrollHeight;
+}
+
+/* NOTES */
+function addNote() {
+    if (!current) return;
+
+    let text = document.getElementById("text").value.trim();
+    let rating = document.getElementById("rating").value;
+
+    if (!text) return;
+
+    let msg =
+        "📌 " + text +
+        (rating ? "\n⭐ " + rating + "/10" : "");
+
+    db.books[current].push({ type: "user", text: msg });
+    db.books[current].push({ type: "bot", text: "💾 Збережено" });
+
+    document.getElementById("text").value = "";
+    document.getElementById("rating").value = "";
+
+    save();
+    renderChat();
+    updateStats();
+}
+
+/* STATS */
+function updateStats() {
+    let books = Object.keys(db.books);
+    let totalRatings = 0;
+    let count = 0;
+
+    books.forEach(b => {
+        db.books[b].forEach(m => {
+            let match = m.text.match(/⭐ (\d+)/);
+            if (match) {
+                totalRatings += parseInt(match[1]);
+                count++;
+            }
+        });
+    });
+
+    let avg = count ? (totalRatings / count).toFixed(1) : 0;
+
+    document.getElementById("stats").innerText =
+        `📊 Книг: ${books.length} | ⭐ Середня оцінка: ${avg}`;
+}
+
+/* EXPORT */
+function exportData() {
+    let dataStr = JSON.stringify(db);
+    navigator.clipboard.writeText(dataStr);
+    alert("📦 Дані скопійовано в буфер");
+}
+
+/* IMPORT */
+function importData() {
+    let data = prompt("Встав JSON дані:");
+    if (!data) return;
+
+    try {
+        db = JSON.parse(data);
+        save();
+        renderBooks();
+        alert("✅ Імпорт успішний");
+    } catch {
+        alert("❌ Помилка JSON");
+    }
+}
+
+renderBooks();
+</script>
+
+</body>
+</html>
