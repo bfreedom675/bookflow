@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <title>BookFlow</title>
 
+<!-- Firebase -->
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
@@ -16,6 +17,7 @@ body{
     display:flex;
     height:100vh;
 }
+
 #login{
     margin:auto;
     background:white;
@@ -23,35 +25,43 @@ body{
     border-radius:15px;
     width:300px;
 }
+
 #app{
     display:none;
     width:100%;
 }
+
 .sidebar{
     width:30%;
     background:white;
     padding:10px;
+    overflow:auto;
 }
+
 .main{
     flex:1;
     padding:10px;
 }
+
 input,button{
     width:100%;
     padding:10px;
     margin:5px 0;
 }
+
 button{
     background:#7b5cff;
     color:white;
     border:none;
     cursor:pointer;
 }
+
 .book{
     padding:8px;
     margin:5px 0;
     background:#f3f3f3;
     cursor:pointer;
+    border-radius:8px;
 }
 </style>
 </head>
@@ -84,14 +94,13 @@ button{
 </div>
 
 <script>
-
-// 🔥 ВСТАВ СВІЙ Firebase config ТУТ
+// 🔥 Firebase config (встав свій)
 const firebaseConfig = {
   apiKey: "ТВІЙ_API_KEY",
-  authDomain: "ТВІЙ_DOMAIN",
+  authDomain: "ТВІЙ_AUTH_DOMAIN",
   projectId: "ТВІЙ_PROJECT_ID",
-  storageBucket: "ТВІЙ_BUCKET",
-  messagingSenderId: "ТВІЙ_SENDER",
+  storageBucket: "ТВІЙ_STORAGE_BUCKET",
+  messagingSenderId: "ТВІЙ_SENDER_ID",
   appId: "ТВІЙ_APP_ID"
 };
 
@@ -107,13 +116,16 @@ let currentBook = null;
 function signup(){
     auth.createUserWithEmailAndPassword(email.value, password.value);
 }
+
 function signin(){
     auth.signInWithEmailAndPassword(email.value, password.value);
 }
+
 function logout(){
     auth.signOut();
 }
 
+// STATE
 auth.onAuthStateChanged(user=>{
     if(user){
         currentUser = user;
@@ -128,10 +140,13 @@ auth.onAuthStateChanged(user=>{
 
 // BOOKS
 function addBook(){
+    if(!bookInput.value) return;
+
     db.collection("users")
     .doc(currentUser.uid)
     .collection("books")
     .add({name: bookInput.value});
+
     bookInput.value="";
 }
 
@@ -159,12 +174,15 @@ function openBook(id,name){
 
 // NOTES
 function addNote(){
+    if(!currentBook || !noteInput.value) return;
+
     db.collection("users")
     .doc(currentUser.uid)
     .collection("books")
     .doc(currentBook)
     .collection("notes")
     .add({text: noteInput.value});
+
     noteInput.value="";
 }
 
@@ -178,12 +196,11 @@ function loadNotes(){
         notes.innerHTML="";
         snap.forEach(doc=>{
             let div=document.createElement("div");
-            div.innerText="📌 "+doc.data().text;
+            div.innerText="📌 " + doc.data().text;
             notes.appendChild(div);
         });
     });
 }
-
 </script>
 
 </body>
