@@ -1,0 +1,207 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>BookFlow</title>
+
+<!-- Firebase -->
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:linear-gradient(135deg,#ffd6e8,#e6d6ff);
+    display:flex;
+    height:100vh;
+}
+
+#login{
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    width:300px;
+}
+
+#app{
+    display:none;
+    width:100%;
+}
+
+.sidebar{
+    width:30%;
+    background:white;
+    padding:10px;
+    overflow:auto;
+}
+
+.main{
+    flex:1;
+    padding:10px;
+}
+
+input,button{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+}
+
+button{
+    background:#7b5cff;
+    color:white;
+    border:none;
+    cursor:pointer;
+}
+
+.book{
+    padding:8px;
+    margin:5px 0;
+    background:#f3f3f3;
+    cursor:pointer;
+    border-radius:8px;
+}
+</style>
+</head>
+
+<body>
+
+<div id="login">
+<h2>🌸 BookFlow</h2>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="signup()">Sign Up</button>
+<button onclick="signin()">Sign In</button>
+</div>
+
+<div id="app">
+<div class="sidebar">
+<h3>📚 Книги</h3>
+<input id="bookInput" placeholder="Нова книга">
+<button onclick="addBook()">Додати</button>
+<div id="bookList"></div>
+<button onclick="logout()">Вийти</button>
+</div>
+
+<div class="main">
+<h2 id="bookTitle">Вибери книгу</h2>
+<input id="noteInput" placeholder="Нотатка">
+<button onclick="addNote()">Додати нотатку</button>
+<div id="notes"></div>
+</div>
+</div>
+
+<script>
+// 🔥 Firebase config (встав свій)
+const firebaseConfig = {
+  apiKey: "ТВІЙ_API_KEY",
+  authDomain: "ТВІЙ_AUTH_DOMAIN",
+  projectId: "ТВІЙ_PROJECT_ID",
+  storageBucket: "ТВІЙ_STORAGE_BUCKET",
+  messagingSenderId: "ТВІЙ_SENDER_ID",
+  appId: "ТВІЙ_APP_ID"
+};
+
+firebase.initializeApp(firebaseConfig);
+
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentUser = null;
+let currentBook = null;
+
+// AUTH
+function signup(){
+    auth.createUserWithEmailAndPassword(email.value, password.value);
+}
+
+function signin(){
+    auth.signInWithEmailAndPassword(email.value, password.value);
+}
+
+function logout(){
+    auth.signOut();
+}
+
+// STATE
+auth.onAuthStateChanged(user=>{
+    if(user){
+        currentUser = user;
+        login.style.display="none";
+        app.style.display="flex";
+        loadBooks();
+    }else{
+        login.style.display="block";
+        app.style.display="none";
+    }
+});
+
+// BOOKS
+function addBook(){
+    if(!bookInput.value) return;
+
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .add({name: bookInput.value});
+
+    bookInput.value="";
+}
+
+function loadBooks(){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .onSnapshot(snap=>{
+        bookList.innerHTML="";
+        snap.forEach(doc=>{
+            let div=document.createElement("div");
+            div.className="book";
+            div.innerText=doc.data().name;
+            div.onclick=()=>openBook(doc.id, doc.data().name);
+            bookList.appendChild(div);
+        });
+    });
+}
+
+function openBook(id,name){
+    currentBook=id;
+    bookTitle.innerText=name;
+    loadNotes();
+}
+
+// NOTES
+function addNote(){
+    if(!currentBook || !noteInput.value) return;
+
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(currentBook)
+    .collection("notes")
+    .add({text: noteInput.value});
+
+    noteInput.value="";
+}
+
+function loadNotes(){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(currentBook)
+    .collection("notes")
+    .onSnapshot(snap=>{
+        notes.innerHTML="";
+        snap.forEach(doc=>{
+            let div=document.createElement("div");
+            div.innerText="📌 " + doc.data().text;
+            notes.appendChild(div);
+        });
+    });
+}
+</script>
+
+</body>
+</html>
