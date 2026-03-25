@@ -16,42 +16,100 @@ body{
     display:flex;
     height:100vh;
 }
+
+/* LOGIN */
 #login{
     margin:auto;
     background:white;
-    padding:20px;
-    border-radius:15px;
+    padding:25px;
+    border-radius:20px;
     width:300px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1);
 }
+
+/* APP */
 #app{
     display:none;
     width:100%;
 }
+
+/* SIDEBAR */
 .sidebar{
     width:30%;
     background:white;
-    padding:10px;
+    padding:15px;
+    overflow:auto;
 }
+
+/* MAIN */
 .main{
     flex:1;
-    padding:10px;
+    padding:20px;
 }
-input,button{
+
+/* INPUT */
+input{
     width:100%;
     padding:10px;
     margin:5px 0;
+    border-radius:10px;
+    border:1px solid #ddd;
 }
+
+/* BUTTON */
 button{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+    border:none;
+    border-radius:10px;
     background:#7b5cff;
     color:white;
-    border:none;
     cursor:pointer;
+    transition:0.3s;
 }
+
+button:hover{
+    transform:scale(1.05);
+}
+
+/* BOOK */
 .book{
-    padding:8px;
+    padding:10px;
     margin:5px 0;
     background:#f3f3f3;
+    border-radius:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
     cursor:pointer;
+    transition:0.3s;
+}
+
+.book:hover{
+    transform:scale(1.02);
+}
+
+/* NOTE */
+.note{
+    background:white;
+    padding:10px;
+    margin:5px 0;
+    border-radius:10px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.05);
+}
+
+/* DELETE BTN */
+.delete{
+    background:red;
+    padding:5px 8px;
+    border-radius:8px;
+    font-size:12px;
+}
+
+/* SEARCH */
+#search{
+    margin-bottom:10px;
 }
 </style>
 </head>
@@ -69,33 +127,37 @@ button{
 <div id="app">
 <div class="sidebar">
 <h3>📚 Книги</h3>
+
+<input id="search" placeholder="🔍 Пошук..." oninput="filterBooks()">
+
 <input id="bookInput" placeholder="Нова книга">
-<button onclick="addBook()">Додати</button>
+<button onclick="addBook()">➕ Додати</button>
+
 <div id="bookList"></div>
-<button onclick="logout()">Вийти</button>
+
+<button onclick="logout()">🚪 Вийти</button>
 </div>
 
 <div class="main">
 <h2 id="bookTitle">Вибери книгу</h2>
+
 <input id="noteInput" placeholder="Нотатка">
-<button onclick="addNote()">Додати нотатку</button>
+<button onclick="addNote()">➕ Додати нотатку</button>
+
 <div id="notes"></div>
 </div>
 </div>
 
 <script>
-// Firebase config (твій реальний)
 const firebaseConfig = {
   apiKey: "AIzaSyDG9DT2ImvGLeZRdQ4j5nVttQCU44TFNj8",
   authDomain: "bookflow-17d9f.firebaseapp.com",
   projectId: "bookflow-17d9f",
   storageBucket: "bookflow-17d9f.firebasestorage.app",
   messagingSenderId: "1020382441634",
-  appId: "1:1020382441634:web:40200c67e0f7e55038e7fb",
-  measurementId: "G-9Z63GN3M5W"
+  appId: "1:1020382441634:web:40200c67e0f7e55038e7fb"
 };
 
-// init Firebase
 firebase.initializeApp(firebaseConfig);
 
 const auth = firebase.auth();
@@ -103,15 +165,7 @@ const db = firebase.firestore();
 
 let currentUser = null;
 let currentBook = null;
-
-// DOM
-const login = document.getElementById("login");
-const app = document.getElementById("app");
-const bookInput = document.getElementById("bookInput");
-const bookList = document.getElementById("bookList");
-const noteInput = document.getElementById("noteInput");
-const notes = document.getElementById("notes");
-const bookTitle = document.getElementById("bookTitle");
+let allBooks = [];
 
 // AUTH
 function signup(){
@@ -153,20 +207,48 @@ function addBook(){
     bookInput.value="";
 }
 
+function deleteBook(id){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(id)
+    .delete();
+}
+
 function loadBooks(){
     db.collection("users")
     .doc(currentUser.uid)
     .collection("books")
     .onSnapshot(snap=>{
+        allBooks=[];
         bookList.innerHTML="";
         snap.forEach(doc=>{
-            let div=document.createElement("div");
-            div.className="book";
-            div.innerText=doc.data().name;
-            div.onclick=()=>openBook(doc.id, doc.data().name);
-            bookList.appendChild(div);
+            const data = {id:doc.id, name:doc.data().name};
+            allBooks.push(data);
         });
+        renderBooks(allBooks);
     });
+}
+
+function renderBooks(books){
+    bookList.innerHTML="";
+    books.forEach(book=>{
+        let div=document.createElement("div");
+        div.className="book";
+
+        div.innerHTML = `
+            <span onclick="openBook('${book.id}','${book.name}')">📖 ${book.name}</span>
+            <button class="delete" onclick="deleteBook('${book.id}')">❌</button>
+        `;
+
+        bookList.appendChild(div);
+    });
+}
+
+function filterBooks(){
+    const q = search.value.toLowerCase();
+    const filtered = allBooks.filter(b=>b.name.toLowerCase().includes(q));
+    renderBooks(filtered);
 }
 
 function openBook(id,name){
@@ -189,6 +271,16 @@ function addNote(){
     noteInput.value="";
 }
 
+function deleteNote(id){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(currentBook)
+    .collection("notes")
+    .doc(id)
+    .delete();
+}
+
 function loadNotes(){
     db.collection("users")
     .doc(currentUser.uid)
@@ -199,7 +291,13 @@ function loadNotes(){
         notes.innerHTML="";
         snap.forEach(doc=>{
             let div=document.createElement("div");
-            div.innerText="📌 " + doc.data().text;
+            div.className="note";
+
+            div.innerHTML = `
+                📌 ${doc.data().text}
+                <button class="delete" onclick="deleteNote('${doc.id}')">❌</button>
+            `;
+
             notes.appendChild(div);
         });
     });
