@@ -1,8 +1,8 @@
-<!DOCTYPE html>
+!DOCTYPE html>
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>BookFlow v5</title>
+<title>🌸 BookFlow v5</title>
 
 <style>
 :root{
@@ -16,8 +16,8 @@
 body{
     margin:0;
     font-family: Arial, sans-serif;
-    height:100vh;
     display:flex;
+    height:100vh;
     background: linear-gradient(135deg, var(--bg1), var(--bg2));
 }
 
@@ -25,7 +25,7 @@ body{
 #sidebar{
     width:30%;
     padding:12px;
-    background: linear-gradient(180deg, #ffffffaa, #ffffff66);
+    background: rgba(255,255,255,0.6);
     backdrop-filter: blur(10px);
     display:flex;
     flex-direction:column;
@@ -35,13 +35,13 @@ body{
 
 h2{
     margin:0;
-    color: var(--purple);
+    color:var(--purple);
 }
 
 input, button{
     padding:10px;
-    border-radius:10px;
     border:none;
+    border-radius:10px;
     outline:none;
 }
 
@@ -73,20 +73,18 @@ button{
 
 header{
     padding:15px;
-    font-size:18px;
     font-weight:bold;
     color:var(--purple);
 }
 
-/* STATS */
 #stats{
     margin:0 15px;
     padding:10px;
     background: var(--card);
     border-radius:12px;
+    font-size:14px;
 }
 
-/* CHAT */
 #chat{
     flex:1;
     padding:15px;
@@ -101,7 +99,6 @@ header{
     padding:10px;
     border-radius:12px;
     white-space:pre-wrap;
-    box-shadow:0 5px 10px #00000010;
 }
 
 .user{
@@ -123,8 +120,11 @@ header{
 }
 
 #text{flex:1;}
-
 .small{width:90px;}
+
+.file{
+    font-size:12px;
+}
 </style>
 </head>
 
@@ -137,6 +137,9 @@ header{
 
     <input id="newBook" placeholder="Нова книга..." />
     <button onclick="addBook()">➕ Додати книгу</button>
+
+    <button onclick="downloadBackup()">💾 Завантажити backup</button>
+    <input class="file" type="file" onchange="loadBackup(event)" />
 
     <div id="bookList"></div>
 </div>
@@ -173,7 +176,7 @@ function save(){
 /* BOOKS */
 function addBook(){
     let name=document.getElementById("newBook").value.trim();
-    if(!name)return;
+    if(!name) return;
 
     if(!db.books[name]) db.books[name]=[];
 
@@ -201,18 +204,16 @@ function renderBooks(){
     updateStats();
 }
 
-/* OPEN */
 function openBook(name){
     current=name;
     document.getElementById("title").innerText="📖 "+name;
     renderChat();
 }
 
-/* CHAT */
 function renderChat(){
     let chat=document.getElementById("chat");
     chat.innerHTML="";
-    if(!current)return;
+    if(!current) return;
 
     db.books[current].forEach(m=>{
         let div=document.createElement("div");
@@ -224,19 +225,19 @@ function renderChat(){
     chat.scrollTop=chat.scrollHeight;
 }
 
-/* ADD NOTE */
+/* NOTES */
 function addNote(){
-    if(!current)return;
+    if(!current) return;
 
     let text=document.getElementById("text").value.trim();
     let rating=document.getElementById("rating").value;
 
-    if(!text)return;
+    if(!text) return;
 
     let msg="📌 "+text+(rating?`\n⭐ ${rating}/10`:"");
 
     db.books[current].push({type:"user",text:msg});
-    db.books[current].push({type:"bot",text:"💾 saved to BookFlow cloud (local demo)"});
+    db.books[current].push({type:"bot",text:"💾 Збережено"});
 
     document.getElementById("text").value="";
     document.getElementById("rating").value="";
@@ -261,7 +262,52 @@ function updateStats(){
     let avg=count?(sum/count).toFixed(1):0;
 
     document.getElementById("stats").innerText=
-    `🌸 BookFlow v5 ${books.length} | ⭐ середня оцінка: ${avg} | 👤 ${db.user}`;
+    `📚 Книг: ${books.length} | ⭐ середня: ${avg}`;
+}
+
+/* =========================
+   💾 BACKUP EXPORT
+========================= */
+function downloadBackup(){
+    const blob = new Blob([JSON.stringify(db,null,2)], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+
+    const a=document.createElement("a");
+    a.href=url;
+    a.download="bookflow_backup.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+/* =========================
+   📤 BACKUP IMPORT
+========================= */
+function loadBackup(event){
+    const file=event.target.files[0];
+    if(!file) return;
+
+    const reader=new FileReader();
+
+    reader.onload=function(e){
+        try{
+            const data=JSON.parse(e.target.result);
+            if(!data.books) throw new Error();
+
+            db=data;
+            save();
+
+            renderBooks();
+            renderChat();
+            updateStats();
+
+            alert("✅ Блог відновлено!");
+        }catch{
+            alert("❌ Невірний файл");
+        }
+    };
+
+    reader.readAsText(file);
 }
 
 renderBooks();
