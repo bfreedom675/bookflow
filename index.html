@@ -1,4 +1,97 @@
-// Firebase init
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>BookFlow</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+
+<style>
+body{
+    margin:0;
+    font-family:Arial;
+    background:linear-gradient(135deg,#ffd6e8,#e6d6ff);
+    display:flex;
+    height:100vh;
+}
+
+#login{
+    margin:auto;
+    background:white;
+    padding:20px;
+    border-radius:15px;
+    width:300px;
+}
+
+#app{
+    display:none;
+    width:100%;
+}
+
+.sidebar{
+    width:30%;
+    background:white;
+    padding:10px;
+}
+
+.main{
+    flex:1;
+    padding:10px;
+}
+
+input,button{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
+}
+
+button{
+    background:#7b5cff;
+    color:white;
+    border:none;
+    cursor:pointer;
+}
+
+.book{
+    padding:8px;
+    margin:5px 0;
+    background:#f3f3f3;
+    cursor:pointer;
+}
+</style>
+</head>
+
+<body>
+
+<div id="login">
+<h2>🌸 BookFlow</h2>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="signup()">Sign Up</button>
+<button onclick="signin()">Sign In</button>
+</div>
+
+<div id="app">
+<div class="sidebar">
+<h3>📚 Книги</h3>
+<input id="bookInput" placeholder="Нова книга">
+<button onclick="addBook()">Додати</button>
+<div id="bookList"></div>
+<button onclick="logout()">Вийти</button>
+</div>
+
+<div class="main">
+<h2 id="bookTitle">Вибери книгу</h2>
+<input id="noteInput" placeholder="Нотатка">
+<button onclick="addNote()">Додати нотатку</button>
+<div id="notes"></div>
+</div>
+</div>
+
+<script>
+// 🔥 Firebase config (ВСТАВ СВІЙ З FIREBASE)
 const firebaseConfig = {
   apiKey: "ТВІЙ_API_KEY",
   authDomain: "ТВІЙ_AUTH_DOMAIN",
@@ -16,24 +109,22 @@ const db = firebase.firestore();
 let currentUser = null;
 let currentBook = null;
 
-// ================= AUTH =================
+// AUTH
 function signup(){
     auth.createUserWithEmailAndPassword(email.value, password.value)
-    .then(() => alert("Акаунт створено ✔"))
-    .catch(e => alert("Помилка: " + e.message));
+    .catch(e => alert(e.message));
 }
 
 function signin(){
     auth.signInWithEmailAndPassword(email.value, password.value)
-    .then(() => console.log("Logged in"))
-    .catch(e => alert("Помилка: " + e.message));
+    .catch(e => alert(e.message));
 }
 
 function logout(){
     auth.signOut();
 }
 
-// ================= STATE =================
+// STATE
 auth.onAuthStateChanged(user=>{
     if(user){
         currentUser = user;
@@ -46,7 +137,7 @@ auth.onAuthStateChanged(user=>{
     }
 });
 
-// ================= BOOKS =================
+// BOOKS
 function addBook(){
     if(!bookInput.value) return;
 
@@ -80,7 +171,7 @@ function openBook(id,name){
     loadNotes();
 }
 
-// ================= NOTES =================
+// NOTES
 function addNote(){
     if(!currentBook || !noteInput.value) return;
 
@@ -109,3 +200,7 @@ function loadNotes(){
         });
     });
 }
+</script>
+
+</body>
+</html>
