@@ -2,315 +2,306 @@
 <html lang="uk">
 <head>
 <meta charset="UTF-8">
-<title>🌸 BookFlow</title>
+<title>BookFlow</title>
+
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
 
 <style>
-:root{
-    --pink:#ff5fa2;
-    --purple:#7b5cff;
-    --bg1:#ffe6f3;
-    --bg2:#efe6ff;
-    --card:#ffffffcc;
-}
-
 body{
     margin:0;
-    font-family: Arial, sans-serif;
+    font-family:Arial;
+    background:linear-gradient(135deg,#ffd6e8,#e6d6ff);
     display:flex;
     height:100vh;
-    background: linear-gradient(135deg, var(--bg1), var(--bg2));
+}
+
+/* LOGIN */
+#login{
+    margin:auto;
+    background:white;
+    padding:25px;
+    border-radius:20px;
+    width:300px;
+    box-shadow:0 10px 30px rgba(0,0,0,0.1);
+}
+
+/* APP */
+#app{
+    display:none;
+    width:100%;
 }
 
 /* SIDEBAR */
-#sidebar{
+.sidebar{
     width:30%;
-    padding:12px;
-    background: rgba(255,255,255,0.6);
-    backdrop-filter: blur(10px);
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-    border-right: 1px solid #fff;
+    background:white;
+    padding:15px;
+    overflow:auto;
 }
 
-h2{
-    margin:0;
-    color:var(--purple);
+/* MAIN */
+.main{
+    flex:1;
+    padding:20px;
 }
 
-input, button{
+/* INPUT */
+input{
+    width:100%;
     padding:10px;
+    margin:5px 0;
+    border-radius:10px;
+    border:1px solid #ddd;
+}
+
+/* BUTTON */
+button{
+    width:100%;
+    padding:10px;
+    margin:5px 0;
     border:none;
     border-radius:10px;
-    outline:none;
-}
-
-button{
-    cursor:pointer;
-    background: linear-gradient(90deg, var(--pink), var(--purple));
+    background:#7b5cff;
     color:white;
-    font-weight:bold;
+    cursor:pointer;
+    transition:0.3s;
 }
 
+button:hover{
+    transform:scale(1.05);
+}
+
+/* BOOK */
 .book{
-    background: var(--card);
     padding:10px;
-    border-radius:12px;
+    margin:5px 0;
+    background:#f3f3f3;
+    border-radius:10px;
+    display:flex;
+    justify-content:space-between;
+    align-items:center;
     cursor:pointer;
-    transition:0.2s;
+    transition:0.3s;
 }
 
 .book:hover{
     transform:scale(1.02);
 }
 
-/* MAIN */
-#main{
-    flex:1;
-    display:flex;
-    flex-direction:column;
-}
-
-header{
-    padding:15px;
-    font-weight:bold;
-    color:var(--purple);
-}
-
-#stats{
-    margin:0 15px;
-    padding:10px;
-    background: var(--card);
-    border-radius:12px;
-    font-size:14px;
-}
-
-#chat{
-    flex:1;
-    padding:15px;
-    overflow-y:auto;
-    display:flex;
-    flex-direction:column;
-    gap:10px;
-}
-
-.msg{
-    max-width:70%;
-    padding:10px;
-    border-radius:12px;
-    white-space:pre-wrap;
-}
-
-.user{
-    align-self:flex-end;
-    background: linear-gradient(90deg, var(--pink), var(--purple));
-    color:white;
-}
-
-.bot{
-    align-self:flex-start;
+/* NOTE */
+.note{
     background:white;
-}
-
-/* INPUT */
-#inputArea{
-    display:flex;
-    gap:8px;
     padding:10px;
+    margin:5px 0;
+    border-radius:10px;
+    box-shadow:0 5px 15px rgba(0,0,0,0.05);
 }
 
-#text{flex:1;}
-.small{width:90px;}
-
-.file{
+/* DELETE BTN */
+.delete{
+    background:red;
+    padding:5px 8px;
+    border-radius:8px;
     font-size:12px;
+}
+
+/* SEARCH */
+#search{
+    margin-bottom:10px;
 }
 </style>
 </head>
 
 <body>
 
-<div id="sidebar">
-    <h2>🌸 BookFlow v5</h2>
-
-    <input id="search" placeholder="🔍 Пошук..." oninput="renderBooks()" />
-
-    <input id="newBook" placeholder="Нова книга..." />
-    <button onclick="addBook()">➕ Додати книгу</button>
-
-    <button onclick="downloadBackup()">💾 Завантажити backup</button>
-    <input class="file" type="file" onchange="loadBackup(event)" />
-
-    <div id="bookList"></div>
+<div id="login">
+<h2>🌸 BookFlow</h2>
+<input id="email" placeholder="Email">
+<input id="password" type="password" placeholder="Password">
+<button onclick="signup()">Sign Up</button>
+<button onclick="signin()">Sign In</button>
 </div>
 
-<div id="main">
+<div id="app">
+<div class="sidebar">
+<h3>📚 Книги</h3>
 
-<header id="title">📚 Оберіть книгу</header>
+<input id="search" placeholder="🔍 Пошук..." oninput="filterBooks()">
 
-<div id="stats">📊 Статистика...</div>
+<input id="bookInput" placeholder="Нова книга">
+<button onclick="addBook()">➕ Додати</button>
 
-<div id="chat"></div>
+<div id="bookList"></div>
 
-<div id="inputArea">
-    <input id="text" placeholder="Нотатка..." />
-    <input id="rating" class="small" type="number" min="1" max="10" placeholder="⭐">
-    <button onclick="addNote()">Надіслати</button>
+<button onclick="logout()">🚪 Вийти</button>
 </div>
 
+<div class="main">
+<h2 id="bookTitle">Вибери книгу</h2>
+
+<input id="noteInput" placeholder="Нотатка">
+<button onclick="addNote()">➕ Додати нотатку</button>
+
+<div id="notes"></div>
+</div>
 </div>
 
 <script>
-let db = JSON.parse(localStorage.getItem("bookflow_v5")) || {
-    user:"guest",
-    books:{}
+const firebaseConfig = {
+  apiKey: "AIzaSyDG9DT2ImvGLeZRdQ4j5nVttQCU44TFNj8",
+  authDomain: "bookflow-17d9f.firebaseapp.com",
+  projectId: "bookflow-17d9f",
+  storageBucket: "bookflow-17d9f.firebasestorage.app",
+  messagingSenderId: "1020382441634",
+  appId: "1:1020382441634:web:40200c67e0f7e55038e7fb"
 };
 
-let current=null;
+firebase.initializeApp(firebaseConfig);
 
-/* SAVE */
-function save(){
-    localStorage.setItem("bookflow_v5", JSON.stringify(db));
+const auth = firebase.auth();
+const db = firebase.firestore();
+
+let currentUser = null;
+let currentBook = null;
+let allBooks = [];
+
+// AUTH
+function signup(){
+    auth.createUserWithEmailAndPassword(email.value, password.value)
+    .catch(e => alert(e.message));
 }
 
-/* BOOKS */
+function signin(){
+    auth.signInWithEmailAndPassword(email.value, password.value)
+    .catch(e => alert(e.message));
+}
+
+function logout(){
+    auth.signOut();
+}
+
+// STATE
+auth.onAuthStateChanged(user=>{
+    if(user){
+        currentUser = user;
+        login.style.display="none";
+        app.style.display="flex";
+        loadBooks();
+    } else {
+        login.style.display="block";
+        app.style.display="none";
+    }
+});
+
+// BOOKS
 function addBook(){
-    let name=document.getElementById("newBook").value.trim();
-    if(!name) return;
+    if(!bookInput.value) return;
 
-    if(!db.books[name]) db.books[name]=[];
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .add({name: bookInput.value});
 
-    document.getElementById("newBook").value="";
-    save();
-    renderBooks();
+    bookInput.value="";
 }
 
-function renderBooks(){
-    let list=document.getElementById("bookList");
-    let search=document.getElementById("search").value.toLowerCase();
+function deleteBook(id){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(id)
+    .delete();
+}
 
-    list.innerHTML="";
+function loadBooks(){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .onSnapshot(snap=>{
+        allBooks=[];
+        bookList.innerHTML="";
+        snap.forEach(doc=>{
+            const data = {id:doc.id, name:doc.data().name};
+            allBooks.push(data);
+        });
+        renderBooks(allBooks);
+    });
+}
 
-    Object.keys(db.books)
-    .filter(b=>b.toLowerCase().includes(search))
-    .forEach(name=>{
+function renderBooks(books){
+    bookList.innerHTML="";
+    books.forEach(book=>{
         let div=document.createElement("div");
         div.className="book";
-        div.innerText="📖 "+name;
-        div.onclick=()=>openBook(name);
-        list.appendChild(div);
+
+        div.innerHTML = `
+            <span onclick="openBook('${book.id}','${book.name}')">📖 ${book.name}</span>
+            <button class="delete" onclick="deleteBook('${book.id}')">❌</button>
+        `;
+
+        bookList.appendChild(div);
     });
-
-    updateStats();
 }
 
-function openBook(name){
-    current=name;
-    document.getElementById("title").innerText="📖 "+name;
-    renderChat();
+function filterBooks(){
+    const q = search.value.toLowerCase();
+    const filtered = allBooks.filter(b=>b.name.toLowerCase().includes(q));
+    renderBooks(filtered);
 }
 
-function renderChat(){
-    let chat=document.getElementById("chat");
-    chat.innerHTML="";
-    if(!current) return;
-
-    db.books[current].forEach(m=>{
-        let div=document.createElement("div");
-        div.className="msg "+m.type;
-        div.innerText=m.text;
-        chat.appendChild(div);
-    });
-
-    chat.scrollTop=chat.scrollHeight;
+function openBook(id,name){
+    currentBook=id;
+    bookTitle.innerText=name;
+    loadNotes();
 }
 
-/* NOTES */
+// NOTES
 function addNote(){
-    if(!current) return;
+    if(!currentBook || !noteInput.value) return;
 
-    let text=document.getElementById("text").value.trim();
-    let rating=document.getElementById("rating").value;
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(currentBook)
+    .collection("notes")
+    .add({text: noteInput.value});
 
-    if(!text) return;
-
-    let msg="📌 "+text+(rating?`\n⭐ ${rating}/10`:"");
-
-    db.books[current].push({type:"user",text:msg});
-    db.books[current].push({type:"bot",text:"💾 Збережено"});
-
-    document.getElementById("text").value="";
-    document.getElementById("rating").value="";
-
-    save();
-    renderChat();
-    updateStats();
+    noteInput.value="";
 }
 
-/* STATS */
-function updateStats(){
-    let books=Object.keys(db.books);
-    let sum=0,count=0;
+function deleteNote(id){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(currentBook)
+    .collection("notes")
+    .doc(id)
+    .delete();
+}
 
-    books.forEach(b=>{
-        db.books[b].forEach(m=>{
-            let r=m.text.match(/⭐ (\d+)/);
-            if(r){sum+=+r[1];count++;}
+function loadNotes(){
+    db.collection("users")
+    .doc(currentUser.uid)
+    .collection("books")
+    .doc(currentBook)
+    .collection("notes")
+    .onSnapshot(snap=>{
+        notes.innerHTML="";
+        snap.forEach(doc=>{
+            let div=document.createElement("div");
+            div.className="note";
+
+            div.innerHTML = `
+                📌 ${doc.data().text}
+                <button class="delete" onclick="deleteNote('${doc.id}')">❌</button>
+            `;
+
+            notes.appendChild(div);
         });
     });
-
-    let avg=count?(sum/count).toFixed(1):0;
-
-    document.getElementById("stats").innerText=
-    `📚 Книг: ${books.length} | ⭐ середня: ${avg}`;
 }
-
-/* =========================
-   💾 BACKUP EXPORT
-========================= */
-function downloadBackup(){
-    const blob = new Blob([JSON.stringify(db,null,2)], {type:"application/json"});
-    const url = URL.createObjectURL(blob);
-
-    const a=document.createElement("a");
-    a.href=url;
-    a.download="bookflow_backup.json";
-    a.click();
-
-    URL.revokeObjectURL(url);
-}
-
-/* =========================
-   📤 BACKUP IMPORT
-========================= */
-function loadBackup(event){
-    const file=event.target.files[0];
-    if(!file) return;
-
-    const reader=new FileReader();
-
-    reader.onload=function(e){
-        try{
-            const data=JSON.parse(e.target.result);
-            if(!data.books) throw new Error();
-
-            db=data;
-            save();
-
-            renderBooks();
-            renderChat();
-            updateStats();
-
-            alert("✅ Блог відновлено!");
-        }catch{
-            alert("❌ Невірний файл");
-        }
-    };
-
-    reader.readAsText(file);
-}
-
-renderBooks();
 </script>
 
 </body>
