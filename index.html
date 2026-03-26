@@ -10,6 +10,7 @@
     --bg1: #ffe6f3;
     --bg2: #efe6ff;
     --card: #ffffff;
+    --user-note: #f3e8ff;     /* ніжно-бузковий фон для нотаток */
     --shadow: 0 8px 25px rgba(123, 92, 255, 0.12);
 }
 * { box-sizing: border-box; }
@@ -102,32 +103,43 @@ header{
     position: relative;
     transition: all 0.2s;
 }
+.user {
+    align-self: flex-end;
+    background: var(--user-note);     /* ніжно-бузковий фон */
+    color: #4a2c7d;
+    border-bottom-right-radius: 4px;
+}
+.bot {
+    align-self: flex-start;
+    background: white;
+    border-bottom-left-radius: 4px;
+}
+
 .msg:hover {
-    filter: brightness(0.96);
+    filter: brightness(0.97);
     box-shadow: 0 4px 15px rgba(0,0,0,0.12);
 }
 .msg .delete-note {
     position: absolute;
     top: 8px;
     right: 8px;
-    font-size: 16px;
-    width: 24px;
-    height: 24px;
+    font-size: 15px;
+    width: 22px;
+    height: 22px;
     display: flex;
     align-items: center;
     justify-content: center;
-    color: #999;
+    color: #aaa;
     opacity: 0;
     transition: all 0.2s;
     border-radius: 50%;
 }
 .msg:hover .delete-note {
     opacity: 1;
-    color: #ff4d4d;
 }
 .msg .delete-note:hover {
-    background: rgba(255,77,77,0.1);
-    color: #ff1a1a;
+    background: rgba(255, 77, 77, 0.15);
+    color: #ff3333;
 }
 
 .photo-container {
@@ -286,8 +298,7 @@ function renderChat() {
         const div = document.createElement("div");
         div.className = `msg ${m.type}`;
         
-        let html = '';
-        if (m.text) html += m.text.replace(/\n/g, '<br>');
+        let html = m.text ? m.text.replace(/\n/g, '<br>') : '';
 
         if (m.photos && m.photos.length) {
             html += `<div class="photo-container">
@@ -300,7 +311,6 @@ function renderChat() {
             <span class="delete-note" onclick="deleteNote(${i}); event.stopImmediatePropagation();">✕</span>
         `;
 
-        // Клік по нотатці (крім хрестика) — редагування тексту
         div.onclick = (e) => {
             if (!e.target.classList.contains('delete-note')) {
                 editNote(i);
