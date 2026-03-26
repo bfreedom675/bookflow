@@ -10,7 +10,7 @@
     --bg1: #ffe6f3;
     --bg2: #efe6ff;
     --card: #ffffff;
-    --user-note: #f3e8ff;     /* ніжно-бузковий фон для нотаток */
+    --user-note: #f3e8ff;     /* ніжно-бузковий */
     --shadow: 0 8px 25px rgba(123, 92, 255, 0.12);
 }
 * { box-sizing: border-box; }
@@ -105,7 +105,7 @@ header{
 }
 .user {
     align-self: flex-end;
-    background: var(--user-note);     /* ніжно-бузковий фон */
+    background: var(--user-note);
     color: #4a2c7d;
     border-bottom-right-radius: 4px;
 }
@@ -158,15 +158,22 @@ header{
 
 #inputArea{
     display:flex;
-    gap: 10px;
+    gap: 8px;
     padding: 20px 24px;
     background: rgba(255,255,255,0.85);
     border-top: 1px solid rgba(255,255,255,0.6);
     flex-wrap: wrap;
+    align-items: center;
 }
 #text{ flex: 1; min-width: 200px; }
 .small{ width: 85px; text-align: center; }
 #photoInput { display: none; }
+
+/* Стиль для кнопки фото */
+#addPhotoBtn {
+    background: linear-gradient(90deg, #a78bfa, #7b5cff) !important;
+    white-space: nowrap;
+}
 </style>
 </head>
 <body>
@@ -204,9 +211,11 @@ header{
         <input id="text" placeholder="Напишіть нотатку або враження..." />
         <input id="rating" class="small" type="number" min="1" max="10" placeholder="⭐ 1-10">
         <button onclick="addNote()">Надіслати</button>
+        
+        <!-- Кнопка фото -->
         <label style="cursor:pointer;">
-            <input id="photoInput" type="file" accept="image/*" multiple onchange="handlePhotoSelect(event)">
-            <button style="background:#666;">📸 Додати фото</button>
+            <input id="photoInput" type="file" accept="image/png, image/jpeg, image/jpg, image/webp, image/gif" multiple onchange="handlePhotoSelect(event)">
+            <button id="addPhotoBtn">📸 Додати фото</button>
         </label>
     </div>
 </div>
@@ -216,6 +225,7 @@ let db = JSON.parse(localStorage.getItem("bookflow_v5")) || { user: "guest", boo
 let current = null;
 let selectedPhotos = [];
 
+// ==================== SAVE ====================
 function save() {
     localStorage.setItem("bookflow_v5", JSON.stringify(db));
 }
@@ -288,7 +298,7 @@ function openBook(name) {
     updateStats();
 }
 
-// ==================== CHAT & NOTES ====================
+// ==================== CHAT ====================
 function renderChat() {
     const chat = document.getElementById("chat");
     chat.innerHTML = "";
@@ -302,7 +312,7 @@ function renderChat() {
 
         if (m.photos && m.photos.length) {
             html += `<div class="photo-container">
-                ${m.photos.map(src => `<img src="${src}" onclick="this.style.maxWidth='95%';this.style.maxHeight='auto'">`).join('')}
+                ${m.photos.map(src => `<img src="${src}" onclick="this.style.maxWidth='95%'; this.style.maxHeight='auto'">`).join('')}
             </div>`;
         }
 
@@ -312,9 +322,7 @@ function renderChat() {
         `;
 
         div.onclick = (e) => {
-            if (!e.target.classList.contains('delete-note')) {
-                editNote(i);
-            }
+            if (!e.target.classList.contains('delete-note')) editNote(i);
         };
         chat.appendChild(div);
     });
@@ -322,9 +330,7 @@ function renderChat() {
 }
 
 function deleteNote(index) {
-    if (!current) return;
-    if (!confirm("Видалити цю нотатку?")) return;
-
+    if (!current || !confirm("Видалити цю нотатку?")) return;
     db.books[current].splice(index, 1);
     save();
     renderChat();
@@ -342,22 +348,44 @@ function editNote(index) {
     updateStats();
 }
 
-// ==================== ADD NOTE WITH PHOTOS ====================
+// ==================== PHOTO HANDLER ====================
 function handlePhotoSelect(event) {
     const files = event.target.files;
-    if (!files.length) return;
+    if (!files || files.length === 0) return;
+
+    let loaded = 0;
+    const total = files.length;
 
     Array.from(files).forEach(file => {
-        if (!file.type.startsWith('image/')) return;
+        // Перевірка формату
+        if (!file.type.startsWith('image/')) {
+            console.warn(`Файл ${file.name} не є зображенням`);
+            loaded++;
+            return;
+        }
+
         const reader = new FileReader();
         reader.onload = function(e) {
             selectedPhotos.push(e.target.result);
+            loaded++;
+            console.log(`Фото завантажено: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+            
+            if (loaded === total) {
+                console.log(`Всього завантажено фото: ${selectedPhotos.length}`);
+            }
+        };
+        reader.onerror = () => {
+            console.error(`Помилка читання файлу: ${file.name}`);
+            loaded++;
         };
         reader.readAsDataURL(file);
     });
+
+    // Очищаємо поле після вибору
     event.target.value = '';
 }
 
+// ==================== ADD NOTE ====================
 function addNote() {
     if (!current) return alert("Спочатку оберіть книгу");
 
@@ -366,7 +394,9 @@ function addNote() {
     let text = textEl.value.trim();
     const rating = ratingEl.value;
 
-    if (!text && selectedPhotos.length === 0) return alert("Введіть текст або додайте фото");
+    if (!text && selectedPhotos.length === 0) {
+        return alert("Введіть текст або додайте хоча б одне фото");
+    }
 
     if (rating && text) text += `\n⭐ ${rating}/10`;
     else if (rating) text = `⭐ ${rating}/10`;
@@ -381,6 +411,7 @@ function addNote() {
     db.books[current].push(note);
     db.books[current].push({ type: "bot", text: "💾 Нотатку збережено" });
 
+    // Очищення
     textEl.value = "";
     ratingEl.value = "";
     selectedPhotos = [];
@@ -390,7 +421,7 @@ function addNote() {
     updateStats();
 }
 
-// ==================== STATS ====================
+// ==================== STATS & BACKUP ====================
 function updateStats() {
     const count = Object.keys(db.books).length;
     let total = 0, num = 0;
@@ -404,7 +435,6 @@ function updateStats() {
     document.getElementById("stats").innerHTML = `📚 Книг: <b>${count}</b> &nbsp;&nbsp; ⭐ Середня: <b>${avg}</b>`;
 }
 
-// ==================== BACKUP ====================
 function downloadBackup() {
     const blob = new Blob([JSON.stringify(db, null, 2)], {type: "application/json"});
     const url = URL.createObjectURL(blob);
