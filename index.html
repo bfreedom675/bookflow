@@ -99,10 +99,36 @@ header{
     line-height: 1.5;
     white-space: pre-wrap;
     box-shadow: 0 3px 10px rgba(0,0,0,0.08);
-    cursor: pointer;
+    position: relative;
+    transition: all 0.2s;
 }
-.user{ align-self: flex-end; background: linear-gradient(90deg, var(--pink), var(--purple)); color: white; }
-.bot{ align-self: flex-start; background: white; }
+.msg:hover {
+    filter: brightness(0.96);
+    box-shadow: 0 4px 15px rgba(0,0,0,0.12);
+}
+.msg .delete-note {
+    position: absolute;
+    top: 8px;
+    right: 8px;
+    font-size: 16px;
+    width: 24px;
+    height: 24px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    color: #999;
+    opacity: 0;
+    transition: all 0.2s;
+    border-radius: 50%;
+}
+.msg:hover .delete-note {
+    opacity: 1;
+    color: #ff4d4d;
+}
+.msg .delete-note:hover {
+    background: rgba(255,77,77,0.1);
+    color: #ff1a1a;
+}
 
 .photo-container {
     margin-top: 10px;
@@ -176,7 +202,7 @@ header{
 <script>
 let db = JSON.parse(localStorage.getItem("bookflow_v5")) || { user: "guest", books: {} };
 let current = null;
-let selectedPhotos = [];   // тимчасово зберігаємо base64 фото для нової нотатки
+let selectedPhotos = [];
 
 function save() {
     localStorage.setItem("bookflow_v5", JSON.stringify(db));
@@ -199,7 +225,7 @@ function getBookStats(bookName) {
     let total = 0, count = 0;
     notes.forEach(m => {
         if (m.timestamp) lastDate = Math.max(lastDate, m.timestamp);
-        const match = m.text.match(/⭐ (\d+)/);
+        const match = m.text ? m.text.match(/⭐ (\d+)/) : null;
         if (match) { total += parseInt(match[1]); count++; }
     });
     return { lastDate, avg: count ? total/count : 0 };
@@ -232,7 +258,7 @@ function renderBooks() {
 }
 
 function deleteBook(name) {
-    if (!confirm(`Видалити книгу "${name}"?`)) return;
+    if (!confirm(`Видалити книгу "${name}" та всі нотатки?`)) return;
     delete db.books[name];
     if (current === name) current = null;
     save();
@@ -259,18 +285,40 @@ function renderChat() {
     db.books[current].forEach((m, i) => {
         const div = document.createElement("div");
         div.className = `msg ${m.type}`;
+        
+        let html = '';
+        if (m.text) html += m.text.replace(/\n/g, '<br>');
+
+        if (m.photos && m.photos.length) {
+            html += `<div class="photo-container">
+                ${m.photos.map(src => `<img src="${src}" onclick="this.style.maxWidth='95%';this.style.maxHeight='auto'">`).join('')}
+            </div>`;
+        }
+
         div.innerHTML = `
-            ${m.text ? m.text.replace(/\n/g, '<br>') : ''}
-            ${m.photos && m.photos.length ? `
-                <div class="photo-container">
-                    ${m.photos.map(src => `<img src="${src}" onclick="this.style.maxWidth='90%'; this.style.maxHeight='auto'">`).join('')}
-                </div>
-            ` : ''}
+            ${html}
+            <span class="delete-note" onclick="deleteNote(${i}); event.stopImmediatePropagation();">✕</span>
         `;
-        div.onclick = () => editNote(i);
+
+        // Клік по нотатці (крім хрестика) — редагування тексту
+        div.onclick = (e) => {
+            if (!e.target.classList.contains('delete-note')) {
+                editNote(i);
+            }
+        };
         chat.appendChild(div);
     });
     chat.scrollTop = chat.scrollHeight;
+}
+
+function deleteNote(index) {
+    if (!current) return;
+    if (!confirm("Видалити цю нотатку?")) return;
+
+    db.books[current].splice(index, 1);
+    save();
+    renderChat();
+    updateStats();
 }
 
 function editNote(index) {
@@ -291,16 +339,12 @@ function handlePhotoSelect(event) {
 
     Array.from(files).forEach(file => {
         if (!file.type.startsWith('image/')) return;
-
         const reader = new FileReader();
         reader.onload = function(e) {
-            selectedPhotos.push(e.target.result);  // base64
-            console.log(`Фото додано: ${file.name} (${(file.size/1024).toFixed(1)} KB)`);
+            selectedPhotos.push(e.target.result);
         };
         reader.readAsDataURL(file);
     });
-
-    // Очищаємо input
     event.target.value = '';
 }
 
@@ -327,7 +371,6 @@ function addNote() {
     db.books[current].push(note);
     db.books[current].push({ type: "bot", text: "💾 Нотатку збережено" });
 
-    // Очищення
     textEl.value = "";
     ratingEl.value = "";
     selectedPhotos = [];
@@ -388,10 +431,6 @@ function loadBackup(event) {
         input.value = '';
     };
     reader.readAsText(file);
-}
-
-function resetFileInput(input) {
-    input.value = '';
 }
 
 // Ініціалізація
