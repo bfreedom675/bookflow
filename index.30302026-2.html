@@ -1,0 +1,291 @@
+<!DOCTYPE html>
+<html lang="uk">
+<head>
+<meta charset="UTF-8">
+<title>🌸 BookFlow v7 — Export Safe</title>
+
+<style>
+:root{
+    --pink:#ff5fa2;
+    --purple:#7b5cff;
+    --bg1:#ffe6f3;
+    --bg2:#efe6ff;
+}
+*{box-sizing:border-box;}
+body{
+    margin:0;
+    font-family:'Segoe UI',Arial;
+    display:flex;
+    height:100vh;
+    background:linear-gradient(135deg,var(--bg1),var(--bg2));
+}
+#sidebar{
+    width:300px;
+    padding:20px;
+    background:#f3e8ff;
+    display:flex;
+    flex-direction:column;
+    gap:12px;
+    overflow:auto;
+}
+input,button,textarea{
+    padding:10px;
+    border:none;
+    border-radius:10px;
+}
+textarea{resize:vertical;min-height:60px;}
+button{
+    background:linear-gradient(90deg,var(--pink),var(--purple));
+    color:white;
+    cursor:pointer;
+}
+#main{flex:1;display:flex;flex-direction:column;}
+#chat{
+    flex:1;
+    padding:20px;
+    overflow:auto;
+    display:flex;
+    flex-direction:column;
+    gap:10px;
+    background:#ffe6f3;
+}
+.msg{
+    padding:12px;
+    border-radius:12px;
+    max-width:70%;
+}
+.user{align-self:flex-end;background:#ffd6eb;}
+.note-remarks{
+    margin-top:8px;
+    background:#ffe0f0;
+    padding:6px;
+    border-radius:6px;
+}
+#inputArea{
+    padding:15px;
+    background:#f3e8ff;
+    display:flex;
+    flex-direction:column;
+    gap:8px;
+}
+.row{display:flex;gap:8px;}
+.exportBtn{
+    background:linear-gradient(90deg,#00c6ff,#0072ff);
+}
+</style>
+</head>
+
+<body>
+
+<div id="sidebar">
+<h2>🌸 BookFlow</h2>
+
+<input id="newBook" placeholder="Нова книга">
+<button onclick="addBook()">➕ Додати</button>
+
+<button class="exportBtn" onclick="exportData()">📥 Експорт даних</button>
+
+<div id="bookList"></div>
+</div>
+
+<div id="main">
+<header id="title">📚 Оберіть книгу</header>
+<div id="chat"></div>
+
+<div id="inputArea">
+<input id="text" placeholder="Нотатка...">
+<textarea id="remarks" placeholder="Примітки..."></textarea>
+
+<div class="row">
+<input id="rating" type="number" min="1" max="10" placeholder="⭐">
+<button onclick="addNote()">➤</button>
+</div>
+</div>
+</div>
+
+<script>
+
+/* 🔥 SAFE LOAD (v7 + v6 fallback) */
+let db =
+    JSON.parse(localStorage.getItem("bookflow_v7")) ||
+    JSON.parse(localStorage.getItem("bookflow_v6")) ||
+    {books:{}};
+
+let current=null;
+let editIndex=null;
+
+/* SAVE */
+function save(){
+    localStorage.setItem("bookflow_v7",JSON.stringify(db));
+}
+
+/* LINKIFY */
+function linkify(text){
+    return text?.replace(/(https?:\/\/[^\s]+)/g, u=>`<a href="${u}" target="_blank">${u}</a>`) || "";
+}
+
+/* EXPORT DATA 🔥 */
+function exportData(){
+    const dataStr = JSON.stringify(db, null, 2);
+    const blob = new Blob([dataStr], {type:"application/json"});
+    const url = URL.createObjectURL(blob);
+
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "bookflow_backup.json";
+    a.click();
+
+    URL.revokeObjectURL(url);
+}
+
+/* ADD BOOK */
+function addBook(){
+    let name=document.getElementById("newBook").value.trim();
+    if(!name)return;
+
+    if(!db.books[name]) db.books[name]=[];
+
+    document.getElementById("newBook").value="";
+    save();
+    renderBooks();
+    openBook(name);
+}
+
+/* RENDER BOOKS */
+function renderBooks(){
+    let list=document.getElementById("bookList");
+    list.innerHTML="";
+
+    Object.keys(db.books).forEach(name=>{
+        let div=document.createElement("div");
+        div.innerHTML=`
+        <button onclick="openBook('${name}')">📖 ${name}</button>
+        <button onclick="editBook('${name}')">✏️</button>
+        <button onclick="deleteBook('${name}')">✕</button>
+        `;
+        list.appendChild(div);
+    });
+}
+
+/* EDIT BOOK */
+function editBook(oldName){
+    let newName=prompt("Нова назва книги:",oldName);
+    if(!newName || newName===oldName) return;
+    if(db.books[newName]) return alert("Вже існує!");
+
+    db.books[newName]=db.books[oldName];
+    delete db.books[oldName];
+
+    if(current===oldName){
+        current=newName;
+        location.hash=encodeURIComponent(newName);
+    }
+
+    save();
+    renderBooks();
+    renderChat();
+}
+
+/* DELETE BOOK */
+function deleteBook(name){
+    if(!confirm("Видалити?"))return;
+    delete db.books[name];
+    save();
+    renderBooks();
+}
+
+/* OPEN BOOK */
+function openBook(name){
+    current=name;
+    location.hash=encodeURIComponent(name);
+    document.getElementById("title").innerText="📖 "+name;
+    renderChat();
+}
+
+/* CHAT */
+function renderChat(){
+    let chat=document.getElementById("chat");
+    chat.innerHTML="";
+    if(!current)return;
+
+    db.books[current].forEach((m,i)=>{
+        let div=document.createElement("div");
+        div.className="msg user";
+
+        div.innerHTML=`
+        <div>${linkify(m.text)}</div>
+        ${m.remarks?`<div class="note-remarks">📝 ${linkify(m.remarks)}</div>`:""}
+        ${m.rating?`⭐ ${m.rating}/10`:""}
+        <div>
+            <span onclick="editNote(${i})">✏️</span>
+            <span onclick="deleteNote(${i})">✕</span>
+        </div>
+        `;
+
+        chat.appendChild(div);
+    });
+
+    chat.scrollTop=chat.scrollHeight;
+}
+
+/* NOTES */
+function deleteNote(i){
+    db.books[current].splice(i,1);
+    save();
+    renderChat();
+}
+
+function editNote(i){
+    let n=db.books[current][i];
+    text.value=n.text||"";
+    remarks.value=n.remarks||"";
+    rating.value=n.rating||"";
+    editIndex=i;
+}
+
+function addNote(){
+    if(!current)return alert("Оберіть книгу");
+
+    let textVal=text.value.trim();
+    let remVal=remarks.value.trim();
+    let ratingVal=rating.value;
+
+    if(!textVal && !remVal && !ratingVal) return;
+
+    let note={text:textVal,remarks:remVal,rating:ratingVal};
+
+    if(editIndex!==null){
+        db.books[current][editIndex]=note;
+        editIndex=null;
+    }else{
+        db.books[current].push(note);
+    }
+
+    text.value="";
+    remarks.value="";
+    rating.value="";
+
+    save();
+    renderChat();
+}
+
+/* LOAD */
+window.addEventListener("load", ()=>{
+    renderBooks();
+
+    if(location.hash){
+        let name=decodeURIComponent(location.hash.substring(1));
+        if(db.books[name]) openBook(name);
+    }
+});
+
+/* HASH */
+window.addEventListener("hashchange", ()=>{
+    let name=decodeURIComponent(location.hash.substring(1));
+    if(db.books[name]) openBook(name);
+});
+
+</script>
+
+</body>
+</html>
